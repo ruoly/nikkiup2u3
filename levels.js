@@ -34,9 +34,22 @@ var tasksRaw = {
   'g2-5': [-0.87, 0.87, -0.6, 0.6, 0.6],
   'g2-6': [1.0, 1.2, 1.0, 1.2, 0.93],
   'g2-7': [0.8, 0.6, -0.8, 0.6, -0.6],
+  'g3-1': [-1.07, 1.33, 1.07, -1.33, 1.07],
+  'g3-2': [0.6, 0.8, 0.6, -0.6, 0.8],
+  'g3-3': [0.8, -1.0, 0.8, -1.0, 0.8],
+  'g3-4': [-0.53, 0.73, -0.53, 0.73, 0.53],
+  'g3-5': [-1.27, -1.0, -1.27, 1.0, 1.0],
+  'g3-6': [1.07, -0.93, -1.07, 0.93, 0.93],
+  'g3-7': [-0.87, 0.6, 0.87, -0.6, 0.6],
 }
 
 var extraRaw = {
+  '婚恋奇迹1': [1.0, 1.33, 1.33, 1.33, 0.67],
+  '婚恋奇迹2': [1.33, -1.33, 0.67, -1.33, 1.0],
+  '婚恋奇迹3': [-1.33, -1.33, -1.33, -1.0, -0.67],
+  '婚恋奇迹4': [-1.33, 0.67, 1.33, 1.33, -1.0],
+  '婚恋奇迹5': [1.33, -1.0, -1.33, 1.33, -0.67],
+
   /*
   '满天繁星: 观星之夜': [1.33, 1.0, 0.67, 1.33, -1.33],
   '满天繁星: 射手座少女': [1.33, 1.33, 1.33, 1.0, 0.67],
@@ -45,12 +58,13 @@ var extraRaw = {
   '满天繁星: 星宿侠女': [-1.33, -1.0, 1.33, -1.33, 0.67],
   '满天繁星: 玄武虚日鼠': [0.67, -1.33, -1.33, 1.33, -1.0],
   '满天繁星: 朱雀翼火蛇': [-1.33, -1.0, -1.33, 1.33, -0.67]
-  */
+  
   '冰雪舞会1': [0.1, 0.2, 0.2, 0.1, -0.3],
   '冰雪舞会2': [1.4, 0.67, -1.4, 2.2, 0.67],
   '冰雪舞会3': [0.8, 1.5, -1.5, 2.33, 0.8],
   '冰雪舞会4': [-0.8, 0.67, 0.67, 0.8, 0.6],
   '冰雪舞会5': [-0.8, -0.8, -0.67, -0.67, 0.67]
+  */
 };
 
 // all data are presented in order "simple", "cute", "active", "pure", "cool"
@@ -198,7 +212,19 @@ var levelsRaw = {
   '11-9': [2.6, 1.33, 2.6, 2.0, 2.0],
   '11-支1': [2.7, -2.0, -2.7, 2.0, 1.33],
   '11-支2': [2.3, 1.6, -2.3, 1.6, 1.1],
-  '11-支3': [2.3, 2.9, 2.9, -1.6, 2.3]
+  '11-支3': [2.3, 2.9, 2.9, -1.6, 2.3],
+  '12-1': [-2.2, -2.2, 3, -1.5, -3],
+  '12-2': [1.9, -2.5, -2.5, -1.9, 1.33],
+  '12-3': [-1.9, 1.0, -1.9, 1.0, 1.0],
+  '12-4': [2.1, 2.8, -2.1, 2.8, -1.33],
+  '12-5': [3.0, 2.33, 3.0, -2.33, 1.67],
+  '12-6': [-1.2, -0.67, -2.1, 1.2, 0.67],
+  '12-7': [1.5, 1.1, 2.33, 1.1, 1.0],
+  '12-8': [-2.33, 2.33, 1.67, -1.67, 1.0],
+  '12-9': [1.3, 0.67, -1.3, 0.67, 0.67],
+  '12-支1': [-1.9, -1.3, -1.9, 1.3, -0.67],
+  '12-支2': [1.33, 1.67, 1.33, 1.67, 1.67],
+  '12-支3': [2.3, 1.0, 2.3, 1.67, 1.0],
 };
 
 function tagMatcher(whitelist, clothes) {
@@ -231,19 +257,21 @@ function noOp() {
 
 function blacklistFilter() {
   return {
-    blacklist: {},
+    lvlList: {},
     add: function(category, id) {
-      if (!blacklist[category]) {
-        blacklist[category] = {};
+      if (!this.lvlList[category]) {
+        this.lvlList[category] = {};
       }
-      blacklist[category][id] = 1;
+      this.lvlList[category][id] = 1;
     },
     matches: function(c) {
-      return blacklist[c.type.mainType] && blacklist[c.type.mainType][c.id];
+      return this.lvlList[c.type.mainType] && this.lvlList[c.type.mainType][c.id];
     },
     filter: function(c) {
       if (this.matches(c)) {
         c.tmpScore /= 10;
+        c.tmpScoreByCategory.f();
+        c.bonusByCategory.f();
       }
     }
   }
@@ -289,12 +317,6 @@ function featureBasedScoringFactory(bonus, multiplier){
     for (var i in FEATURES) {
       var f = FEATURES[i];
       var addon = Math.abs(criteria[f] * clothes.type.score[bonus] * multiplier);
-      if (criteria.boost1 && criteria.boost1 == f) {
-        addon *= 1.27;
-      }
-      if (criteria.boost2 && criteria.boost2 == f) {
-        addon *= 1.27 * 1.4;
-      }
       byFeature[f] = addon;
       total += addon;
     }
@@ -524,6 +546,15 @@ function addBonusInfo(base, weight, tag) {
   '11-4': [addBonusInfo('A', 0.1, "冬装")],
   '11-7': [addBonusInfo('A', 0.5, "欧式古典")],
   '11-支2': [addBonusInfo('C', 1, "中性风")],
+  '12-3': [addBonusInfo('A', 0.5, "侠客联盟"), addBonusInfo('A', 0.5, "童话系")],
+  '12-5': [addBonusInfo('A', 0.25, "原宿系")],
+  '12-6': [addBonusInfo('A', 1, "中式古典")],
+  '12-7': [addBonusInfo('S', 1, "运动系")],
+  '12-8': [addBonusInfo('B', 1, "未来系")],
+  '12-9': [addBonusInfo('SS', 1.5, "波西米亚")],
+  '12-支1': [addBonusInfo('B', 1, "中式古典")],
+  '12-支2': [addBonusInfo('A', 1, "居家服"), addBonusInfo('A', 1, "睡衣")],
+  '12-支3': [addBonusInfo('B', 1, "运动系")],
   '月下舞会3': [addBonusInfo('S', 1, "欧式古典")],
   '仲夏夜之梦1': [addBonusInfo('S', 1, "童话系")],
   '仲夏夜之梦2': [replaceBonusInfo('SS', 1, "和风")],
@@ -554,13 +585,22 @@ function addBonusInfo(base, weight, tag) {
   'g2-5': [addBonusInfo('S', 1, "女仆装")],
   'g2-6': [addBonusInfo('B', 0.25, "海军风")],
   'g2-7': [addBonusInfo('S', 1, "中式现代")],
+  'g3-2': [addBonusInfo('A', 2, "沐浴")],
+  'g3-3': [addBonusInfo('S', 1, "泳装")],
+  'g3-4': [addBonusInfo('SS', 1, "和风")],
+  'g3-6': [addBonusInfo('A', 0.5, "中性风")],
+  'g3-7': [addBonusInfo('A', 1, "侠客联盟"), addBonusInfo('S', 0.25, "欧式古典")],
   '满天繁星: 喝茶听课': [addBonusInfo('A', 1, "中式古典"), addBonusInfo('A', 1, "中式现代")],
   '满天繁星: 星宿侠女': [addBonusInfo('A', 1, "侠客联盟")],
   '满天繁星: 朱雀翼火蛇': [addBonusInfo('A', 1, "中式古典"), addBonusInfo('A', 1, "中式现代")],
   '冰雪舞会1': [addBonusInfo('A', 4, "居家服"), addBonusInfo('A', 10, "睡衣")],
   '冰雪舞会2': [addBonusInfo('S', 0.25, "森女系列")],
   '冰雪舞会4': [addBonusInfo('S', 1, "童话系")],
-  '冰雪舞会5': [addBonusInfo('S', 1, "欧式古典")]
+  '冰雪舞会5': [addBonusInfo('S', 1, "欧式古典")],
+  '婚恋奇迹3': [addBonusInfo('A', 1, "晚礼服")],
+  '婚恋奇迹4': [addBonusInfo('A', 1, "洛丽塔")],
+  '婚恋奇迹5': [addBonusInfo('A', 1, "中式现代"), addBonusInfo('A', 1, "中式古典")],
+
  };
 
 var additionalLevelInfo = {
